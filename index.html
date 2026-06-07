@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Космопорт</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Russo+One&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#e6a94b; --gold-dark:#c8842f; --brown:#8a3b1e; --brown-soft:#a8542c;
+    --board:#27344a; --green:#74c23a; --green-dark:#4f9c22; --u: clamp(9px, 2.55vh, 18px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;width:100%;overflow:hidden;}
+  /* preload loader */
+  #loader{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    background:radial-gradient(ellipse at 50% 40%,#26323e,#0e1620);transition:opacity .45s ease;}
+  #loader.hide{opacity:0;pointer-events:none;}
+  #loader .ldr-ring{width:54px;height:54px;border-radius:50%;border:5px solid rgba(255,255,255,.18);border-top-color:#86d24c;animation:ldrSpin .8s linear infinite;}
+  #loader .ldr-txt{color:#cfe0c4;font-family:system-ui,sans-serif;font-weight:600;font-size:15px;letter-spacing:.5px;}
+  @keyframes ldrSpin{to{transform:rotate(360deg);}}
+  body{font-family:'Fredoka',system-ui,sans-serif;background:radial-gradient(ellipse at 50% 30%,#3a5a3a,#1c2a1f 75%);}
+
+  .wrap{position:fixed;inset:0;z-index:2;
+    padding:calc(var(--u)*0.5 + env(safe-area-inset-top)) calc(var(--u)*0.7 + env(safe-area-inset-right))
+            calc(var(--u)*0.5 + env(safe-area-inset-bottom)) calc(var(--u)*0.7 + env(safe-area-inset-left));
+    display:flex;}
+  .panel{position:relative;flex:1;display:flex;flex-direction:column;gap:calc(var(--u)*0.5);
+    background:linear-gradient(#fbeccb,#f3dcab);border:calc(var(--u)*0.32) solid var(--gold);border-radius:calc(var(--u)*1.4);
+    box-shadow:0 0 0 calc(var(--u)*0.24) var(--gold-dark),0 calc(var(--u)*0.9) calc(var(--u)*2) rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.45);
+    padding:calc(var(--u)*0.55) calc(var(--u)*0.7);min-height:0;}
+
+  .topbar{position:relative;display:flex;align-items:center;justify-content:center;height:calc(var(--u)*4.2);flex:none;}
+  .title{background:linear-gradient(#fceeca,#f1d6a2);border:calc(var(--u)*0.26) solid var(--gold);
+    box-shadow:0 0 0 calc(var(--u)*0.2) var(--gold-dark),0 calc(var(--u)*0.3) calc(var(--u)*0.6) rgba(0,0,0,.3);
+    border-radius:calc(var(--u)*1.1);padding:calc(var(--u)*0.2) calc(var(--u)*1.8);
+    font-weight:700;font-size:calc(var(--u)*1.35);letter-spacing:1px;color:var(--brown);text-transform:uppercase;text-shadow:0 1px 0 #fff7e6;}
+  .cbtn{position:absolute;top:50%;transform:translateY(-50%);width:calc(var(--u)*2.1);height:calc(var(--u)*2.1);
+    border-radius:calc(var(--u)*0.6);background:linear-gradient(#fceeca,#f1d6a2);border:calc(var(--u)*0.24) solid var(--gold);
+    box-shadow:0 0 0 calc(var(--u)*0.18) var(--gold-dark),0 calc(var(--u)*0.25) calc(var(--u)*0.5) rgba(0,0,0,.3);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .cbtn.left{left:0;}.cbtn.right{right:0;}.cbtn svg{width:60%;height:60%;}
+  /* fuel indicator (top bar) */
+  .fuelind{position:absolute;top:50%;right:calc(var(--u)*2.7);transform:translateY(-50%);z-index:6;display:flex;align-items:center;gap:calc(var(--u)*0.25);cursor:pointer;
+    background:linear-gradient(#fceeca,#f1d6a2);border:calc(var(--u)*0.2) solid var(--gold);border-radius:calc(var(--u)*0.9);
+    box-shadow:0 0 0 calc(var(--u)*0.14) var(--gold-dark),0 calc(var(--u)*0.2) calc(var(--u)*0.4) rgba(0,0,0,.3);
+    padding:calc(var(--u)*0.16) calc(var(--u)*0.5) calc(var(--u)*0.16) calc(var(--u)*0.25);}
+  .fuelind img{height:calc(var(--u)*2.7);width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));}
+  .fuelind .fnum{font-weight:700;font-size:calc(var(--u)*1.15);color:var(--brown);}
+  .fuelind.low .fnum{color:#e23529;}
+  .fuelind.low{border-color:#e2563a;box-shadow:0 0 calc(var(--u)*0.65) rgba(226,86,58,.75),0 0 0 calc(var(--u)*0.14) #b53a22;}
+  .fuelind.shake{animation:fuelShake .5s ease;}
+  @keyframes fuelShake{0%,100%{transform:translateY(-50%) translateX(0);}20%{transform:translateY(-50%) translateX(-5px);}40%{transform:translateY(-50%) translateX(5px);}60%{transform:translateY(-50%) translateX(-4px);}80%{transform:translateY(-50%) translateX(4px);}}
+  .fbuy{margin-left:calc(var(--u)*0.3);border:none;border-radius:calc(var(--u)*0.55);font-family:inherit;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;
+    font-size:calc(var(--u)*0.78);padding:calc(var(--u)*0.2) calc(var(--u)*0.5);display:flex;align-items:center;gap:calc(var(--u)*0.22);text-transform:uppercase;
+    background:linear-gradient(#86d24c,#4f9c22);box-shadow:0 calc(var(--u)*0.18) 0 #3c7d18;}
+  .fbuy svg{width:calc(var(--u)*1.05);height:calc(var(--u)*0.72);}
+  .fuelind:not(.low) .fbuy{display:none;}
+
+  .lanes{flex:1;display:flex;flex-direction:column;gap:calc(var(--u)*0.5);min-height:0;}
+  .lane{position:relative;min-height:0;border-radius:calc(var(--u)*0.7);overflow:hidden;
+    background:url('cosmoport-lane-bg.webp') center 78%/cover no-repeat;border:calc(var(--u)*0.16) solid #e7c486;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.32),inset 0 0 16px rgba(0,0,0,.35);}
+  .lane.active{flex:1.6;}
+  .lane.locked{flex:1;background-position:center 92%;}
+
+  /* convoy slides as a whole */
+  .convoy{position:absolute;inset:0;display:none;align-items:flex-end;padding:0 calc(var(--u)*0.7) calc(var(--u)*0.3);
+    transform:translateX(0);transition:transform .95s cubic-bezier(.35,.7,.28,1);will-change:transform;}
+  .convoy.show{display:flex;}
+  .train{display:flex;align-items:flex-end;justify-content:center;height:100%;width:100%;}
+  .train.mirror{transform:scaleX(-1);}   /* materials train faces / runs the other way */
+  .unit{position:relative;display:flex;align-items:flex-end;height:100%;margin:0 calc(var(--u)*-0.55);animation:bob 3.2s ease-in-out infinite;}
+  .unit.tug img.body{height:104%;display:block;filter:drop-shadow(0 7px 8px rgba(0,0,0,.42));}
+  .unit.cap{margin:0 calc(var(--u)*-0.55);}
+  .unit:nth-child(1){animation-delay:0s;}.unit:nth-child(2){animation-delay:.2s;}
+  .unit:nth-child(3){animation-delay:.4s;}.unit:nth-child(4){animation-delay:.6s;}.unit:nth-child(5){animation-delay:.8s;}
+
+  /* capsule: open layer sets size; domed layer overlays, matched by WIDTH+bottom so the BODY aligns */
+  .capwrap{position:relative;height:97%;display:inline-block;}
+  .lay-open{height:100%;display:block;filter:drop-shadow(0 7px 8px rgba(0,0,0,.42));transition:opacity .4s ease;will-change:opacity;}
+  .lay-domed{position:absolute;left:0;bottom:0;width:100%;height:auto;opacity:0;transform:translateY(-14%) scale(1.01);
+    transform-origin:bottom center;transition:opacity .5s ease,transform .5s cubic-bezier(.3,.9,.4,1);will-change:opacity,transform;
+    filter:drop-shadow(0 7px 8px rgba(0,0,0,.42));pointer-events:none;}
+  .cap.sealed .lay-domed{opacity:1;transform:translateY(0) scale(1);}
+  .cap.sealed .lay-open{opacity:0;}
+  .cap.notrans .lay-open,.cap.notrans .lay-domed{transition:none;}
+  .cap.sealed .ghost,.cap.sealed .badge,.cap.sealed .check,.cap.sealed .excl{opacity:0;transition:opacity .25s;}
+
+  .ghost{position:absolute;left:50%;bottom:34%;transform:translateX(-50%);height:32%;opacity:.95;
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,.4));pointer-events:none;transition:opacity .3s;}
+  .cap.loadable{cursor:pointer;}
+  .badge{position:absolute;right:14%;bottom:16%;background:linear-gradient(#fff,#ededed);color:#4a3320;font-weight:700;
+    font-size:calc(var(--u)*0.86);line-height:1;padding:calc(var(--u)*0.2) calc(var(--u)*0.5);border-radius:999px;
+    border:calc(var(--u)*0.13) solid #d7b06a;box-shadow:0 calc(var(--u)*0.16) calc(var(--u)*0.3) rgba(0,0,0,.4);white-space:nowrap;transition:opacity .3s;}
+  .badge.short{background:linear-gradient(#ffe2e2,#ffc4c4);border-color:#e07d7d;color:#c0271f;}
+  .check{position:absolute;right:6%;top:6%;width:calc(var(--u)*2.7);height:calc(var(--u)*2.7);border-radius:50%;
+    background:radial-gradient(circle at 38% 28%,#c4f898,#46a020 74%);border:calc(var(--u)*0.2) solid #fff;
+    box-shadow:0 calc(var(--u)*0.22) calc(var(--u)*0.42) rgba(0,0,0,.42),inset 0 calc(var(--u)*0.22) calc(var(--u)*0.22) rgba(255,255,255,.6);
+    display:flex;align-items:center;justify-content:center;transition:opacity .3s;}
+  .check svg{width:62%;height:62%;filter:drop-shadow(0 1px 0 rgba(0,70,0,.4));}
+  .excl{position:absolute;left:6%;top:4%;width:calc(var(--u)*2.1);height:calc(var(--u)*2.1);border-radius:50%;
+    background:radial-gradient(circle at 38% 28%,#ffa192,#e23529 74%);border:calc(var(--u)*0.18) solid #fff;color:#fff;font-weight:800;
+    display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*1.35);line-height:1;
+    box-shadow:0 calc(var(--u)*0.2) calc(var(--u)*0.4) rgba(0,0,0,.42),inset 0 calc(var(--u)*0.18) calc(var(--u)*0.2) rgba(255,255,255,.45);
+    transition:opacity .3s;animation:exclPulse 1.2s ease-in-out infinite;}
+  @keyframes exclPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.13);}}
+
+  /* flying resource icon on collect */
+  .flyicon{position:fixed;z-index:60;pointer-events:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45));
+    transition:transform .72s cubic-bezier(.4,.15,.2,1),opacity .72s ease-in;will-change:transform,opacity;}
+
+  /* warehouse / hangar side panel */
+  .hangar{position:fixed;top:50%;right:0;transform:translate(112%,-50%);z-index:25;width:calc(var(--u)*12.5);
+    background:linear-gradient(#fbeccb,#f0d6a4);border:calc(var(--u)*0.3) solid var(--gold);border-right:none;
+    border-radius:calc(var(--u)*1.1) 0 0 calc(var(--u)*1.1);
+    box-shadow:-6px 0 18px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.45);
+    padding:calc(var(--u)*0.7) calc(var(--u)*0.7) calc(var(--u)*0.6);transition:transform .55s cubic-bezier(.3,.85,.3,1);}
+  .hangar.open{transform:translate(0,-50%);}
+  .h-head{display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*0.4);text-align:center;font-weight:700;color:var(--brown);text-transform:uppercase;font-size:calc(var(--u)*1.1);letter-spacing:1px;margin-bottom:calc(var(--u)*0.35);}
+  .h-cap{text-align:center;}
+  #hCap{font-size:calc(var(--u)*1.35);color:var(--brown);font-weight:700;letter-spacing:.5px;display:inline-block;}
+  #hCap.bump{animation:bump .4s ease;}
+  .h-bar{height:calc(var(--u)*1.15);background:#caa074;border-radius:999px;overflow:hidden;margin-top:calc(var(--u)*0.4);box-shadow:inset 0 2px 4px rgba(80,40,10,.55);border:calc(var(--u)*0.13) solid #b58a5e;}
+  .h-fill{height:100%;background:linear-gradient(#86d24c,#4f9c22);width:30%;transition:width .45s ease;box-shadow:inset 0 2px 2px rgba(255,255,255,.55);border-radius:999px;}
+  @keyframes bump{0%,100%{transform:scale(1);}45%{transform:scale(1.14);}}
+
+  /* per-lane TRAVEL board */
+  .travelboard{position:absolute;inset:6% 2%;display:none;align-items:center;gap:calc(var(--u)*0.8);
+    background:linear-gradient(#fbeaca,#efd3a0);border:calc(var(--u)*0.26) solid #dba65a;border-radius:calc(var(--u)*1.1);
+    padding:calc(var(--u)*0.6) calc(var(--u)*1);box-shadow:inset 0 3px 7px rgba(255,255,255,.6),inset 0 -4px 9px rgba(150,90,40,.25),0 5px 12px rgba(0,0,0,.3);}
+  .lane.travel .travelboard{display:flex;}
+  .lab{font-size:calc(var(--u)*0.85);color:var(--brown-soft);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:calc(var(--u)*0.25);text-align:center;}
+  /* sci-fi holo destination screen */
+  .holo{flex:1;position:relative;height:100%;overflow:hidden;border-radius:calc(var(--u)*0.6);
+    background:linear-gradient(160deg,#0a1424 0%,#0c1c33 55%,#08111f 100%);
+    border:calc(var(--u)*0.14) solid #2a6f8f;
+    box-shadow:inset 0 0 calc(var(--u)*0.8) rgba(0,0,0,.85),inset 0 0 calc(var(--u)*0.9) rgba(60,200,255,.18),0 0 calc(var(--u)*0.5) rgba(50,180,230,.35);
+    display:flex;flex-direction:column;justify-content:center;padding:calc(var(--u)*0.3) calc(var(--u)*0.9);}
+  /* static scanlines + grid */
+  .holo::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(0deg,rgba(120,220,255,.07) 0 1px,transparent 1px calc(var(--u)*0.32));}
+  /* sweeping scan glow */
+  .holo-scan{position:absolute;left:0;right:0;top:0;height:38%;pointer-events:none;
+    background:linear-gradient(180deg,rgba(120,230,255,.18),rgba(120,230,255,0));animation:holoScan 3.2s linear infinite;}
+  @keyframes holoScan{0%{transform:translateY(-110%);}100%{transform:translateY(320%);}}
+  .holo-label{position:relative;z-index:2;color:#5fd2ff;font-family:'Russo One',system-ui;font-size:calc(var(--u)*0.72);
+    letter-spacing:.22em;text-transform:uppercase;display:flex;align-items:center;gap:calc(var(--u)*0.4);text-shadow:0 0 calc(var(--u)*0.3) rgba(95,210,255,.8);}
+  .holo-label .dot{width:calc(var(--u)*0.5);height:calc(var(--u)*0.5);border-radius:50%;background:#62f3a6;box-shadow:0 0 calc(var(--u)*0.4) #62f3a6;animation:holoBlink 1.1s steps(1) infinite;}
+  .holo-dest{position:relative;z-index:2;display:flex;align-items:center;gap:calc(var(--u)*0.18);margin-top:calc(var(--u)*0.15);}
+  #destName{font-family:'Russo One',system-ui;font-weight:400;font-size:calc(var(--u)*2.9);line-height:1;
+    color:#dffaff;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;
+    text-shadow:0 0 calc(var(--u)*0.4) rgba(120,230,255,.95),0 0 calc(var(--u)*1) rgba(70,180,255,.7),0 calc(var(--u)*0.12) 0 rgba(0,0,0,.4);}
+  .holo-cur{width:calc(var(--u)*0.34);height:calc(var(--u)*2.4);background:#7fe6ff;box-shadow:0 0 calc(var(--u)*0.5) #7fe6ff;
+    border-radius:2px;animation:holoBlink 1s steps(1) infinite;}
+  @keyframes holoBlink{0%,49%{opacity:1;}50%,100%{opacity:.15;}}
+  .tb-mid{margin-left:auto;display:flex;flex-direction:column;align-items:center;}
+  .timer{display:flex;gap:calc(var(--u)*0.26);align-items:center;justify-content:center;}
+  .timer .d{width:calc(var(--u)*2.15);height:calc(var(--u)*3.1);border-radius:calc(var(--u)*0.38);background:linear-gradient(#3d4d6a,#212d44);color:#fff;font-weight:700;font-size:calc(var(--u)*2.2);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 -7px 9px rgba(0,0,0,.5),0 2px 4px rgba(0,0,0,.3);}
+  .timer .colon{color:var(--brown);font-weight:700;font-size:calc(var(--u)*1.8);}
+  .uns{display:flex;justify-content:space-around;width:100%;margin-top:calc(var(--u)*0.16);font-size:calc(var(--u)*0.78);color:var(--brown-soft);font-weight:600;letter-spacing:.5px;}
+  .speedup{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(#8ad652,#4f9c22);border:calc(var(--u)*0.16) solid #fff;border-radius:calc(var(--u)*0.95);box-shadow:0 calc(var(--u)*0.36) 0 #3c7d18,0 calc(var(--u)*0.5) calc(var(--u)*0.9) rgba(0,0,0,.3),inset 0 2px 3px rgba(255,255,255,.6);color:#fff;font-family:inherit;cursor:pointer;padding:calc(var(--u)*0.55) calc(var(--u)*1.4);}
+  .speedup:active{transform:translateY(4px);box-shadow:0 1px 0 #3c7d18,inset 0 2px 3px rgba(255,255,255,.6);}
+  .speedup .l{font-weight:700;font-size:calc(var(--u)*1.3);text-transform:uppercase;text-shadow:0 2px 2px rgba(0,0,0,.28);letter-spacing:.5px;}
+  .speedup .c{display:flex;align-items:center;gap:calc(var(--u)*0.34);font-weight:700;font-size:calc(var(--u)*1.05);margin-top:calc(var(--u)*0.12);}
+  .speedup .c svg{width:calc(var(--u)*1.4);height:calc(var(--u)*0.95);}
+
+  .lane.locked::before{content:'';position:absolute;inset:0;background:linear-gradient(rgba(10,8,24,.46),rgba(10,8,24,.62));}
+  .lock-content{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#fdebcf;z-index:2;padding:0 calc(var(--u)*1.5);}
+  .lock-content .txt{font-weight:600;font-size:calc(var(--u)*1);line-height:1.25;letter-spacing:.5px;text-shadow:0 2px 4px rgba(0,0,0,.6);text-transform:uppercase;}
+  .lock-content .lvl{color:#ffd34d;font-weight:700;font-size:calc(var(--u)*1.4);}
+
+  /* load modal */
+  .scrim{position:fixed;inset:0;z-index:20;display:none;}.scrim.on{display:block;}
+  .modal{position:absolute;z-index:21;width:calc(var(--u)*16);background:linear-gradient(#fdf0d4,#f4ddb0);border:calc(var(--u)*0.28) solid var(--gold);
+    border-radius:calc(var(--u)*1);box-shadow:0 0 0 calc(var(--u)*0.2) var(--gold-dark),0 calc(var(--u)*0.8) calc(var(--u)*1.6) rgba(0,0,0,.5);padding:calc(var(--u)*0.7);display:none;}
+  .modal.on{display:block;}
+  .modal .arrow{position:absolute;top:calc(var(--u)*-0.85);left:50%;transform:translateX(-50%);width:0;height:0;border-left:calc(var(--u)*0.85) solid transparent;border-right:calc(var(--u)*0.85) solid transparent;border-bottom:calc(var(--u)*0.85) solid var(--gold-dark);}
+  .m-title{text-align:center;color:var(--brown);font-weight:700;font-size:calc(var(--u)*1.05);margin-bottom:calc(var(--u)*0.5);text-transform:uppercase;letter-spacing:.5px;}
+  .m-res{display:flex;align-items:center;gap:calc(var(--u)*0.5);background:#fff7e6;border:2px solid #e6c98c;border-radius:calc(var(--u)*0.7);padding:calc(var(--u)*0.35) calc(var(--u)*0.5);margin-bottom:calc(var(--u)*0.5);}
+  .m-res img{height:calc(var(--u)*2.1);width:calc(var(--u)*2.1);object-fit:contain;}
+  .m-res .cnt{font-weight:700;font-size:calc(var(--u)*1.25);color:#2f7d22;}.m-res .cnt.short{color:#d33;}
+  .m-find{margin-left:auto;width:calc(var(--u)*2);height:calc(var(--u)*2);border-radius:50%;border:2px solid #2c7fb8;background:linear-gradient(#6fc0ef,#3a9bd6);color:#fff;cursor:pointer;font-size:calc(var(--u)*1);display:flex;align-items:center;justify-content:center;}
+  .m-row{display:flex;gap:calc(var(--u)*0.45);margin-bottom:calc(var(--u)*0.5);}
+  .m-help,.m-req{flex:1;border:none;border-radius:calc(var(--u)*0.6);font-family:inherit;font-weight:700;color:#fff;cursor:pointer;font-size:calc(var(--u)*0.82);padding:calc(var(--u)*0.4) 0;display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*0.3);text-transform:uppercase;}
+  .m-help{background:linear-gradient(#6fc0ef,#3a86c8);box-shadow:0 calc(var(--u)*0.22) 0 #2b6a9e;}
+  .m-req{background:linear-gradient(#ffb24d,#f08a2a);box-shadow:0 calc(var(--u)*0.22) 0 #c4661a;}
+  .m-load{width:100%;border:none;border-radius:calc(var(--u)*0.7);font-family:inherit;font-weight:700;color:#fff;cursor:pointer;font-size:calc(var(--u)*1.1);padding:calc(var(--u)*0.5) 0;text-transform:uppercase;letter-spacing:.5px;background:linear-gradient(#86d24c,var(--green-dark));box-shadow:0 calc(var(--u)*0.28) 0 #3c7d18,inset 0 2px 2px rgba(255,255,255,.5);}
+  .m-load:disabled{background:linear-gradient(#cfcabf,#a8a294);box-shadow:0 calc(var(--u)*0.28) 0 #807a6d;cursor:not-allowed;color:#f0ece3;}
+  .m-bal{text-align:center;font-size:calc(var(--u)*0.9);color:var(--brown-soft);font-weight:600;margin-bottom:calc(var(--u)*0.45);}
+  .m-bal b{color:var(--brown);}
+  .m-buy{flex:1.15;border:none;border-radius:calc(var(--u)*0.6);font-family:inherit;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;
+    font-size:calc(var(--u)*0.85);padding:calc(var(--u)*0.42) calc(var(--u)*0.2);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*0.22);text-transform:uppercase;
+    background:linear-gradient(#86d24c,#4f9c22);box-shadow:0 calc(var(--u)*0.24) 0 #3c7d18;}
+  .m-buy:disabled{background:linear-gradient(#cfcabf,#a8a294);box-shadow:0 calc(var(--u)*0.24) 0 #807a6d;cursor:not-allowed;color:#f0ece3;}
+  .m-buy svg{width:calc(var(--u)*1.15);height:calc(var(--u)*0.8);vertical-align:middle;flex:none;}
+  #mActions .m-row{margin-bottom:0;}
+
+  /* demo control bar */
+  /* engine durability bar under the tug */
+  .unit.tug{position:relative;}
+  .engbar{position:absolute;bottom:calc(var(--u)*0.55);left:50%;transform:translateX(-50%);z-index:6;
+    display:flex;align-items:center;gap:calc(var(--u)*0.32);cursor:pointer;
+    background:rgba(15,20,32,.85);border:calc(var(--u)*0.13) solid rgba(255,255,255,.3);border-radius:999px;
+    padding:calc(var(--u)*0.14) calc(var(--u)*0.45) calc(var(--u)*0.14) calc(var(--u)*0.32);box-shadow:0 calc(var(--u)*0.2) calc(var(--u)*0.34) rgba(0,0,0,.5);}
+  .engbar .engico{font-size:calc(var(--u)*0.95);line-height:1;}
+  .engtrack{width:calc(var(--u)*5);height:calc(var(--u)*0.9);background:#0c1320;border-radius:999px;overflow:hidden;box-shadow:inset 0 2px 3px rgba(0,0,0,.7);}
+  .engfill{height:100%;border-radius:999px;background:linear-gradient(#86d24c,#4f9c22);transition:width .4s ease,background .3s;box-shadow:inset 0 1px 1px rgba(255,255,255,.5);}
+  .engfill.mid{background:linear-gradient(#ffd24d,#f0a000);}
+  .engfill.low{background:linear-gradient(#ff7a6a,#e23529);animation:engPulse 1s ease-in-out infinite;}
+  @keyframes engPulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.35);}}
+
+  /* maintenance (ТО) modal extras (reuses .owin-pop / .owin-scrim) */
+  .to-sub{color:#7a4a2a;font-size:calc(var(--u)*0.9);font-weight:500;line-height:1.35;margin-bottom:calc(var(--u)*0.6);}
+  .to-row{display:flex;align-items:center;gap:calc(var(--u)*0.5);background:#fff7e6;border:2px solid #e6c98c;border-radius:calc(var(--u)*0.6);
+    padding:calc(var(--u)*0.3) calc(var(--u)*0.5);margin-bottom:calc(var(--u)*0.4);}
+  .to-row img{width:calc(var(--u)*2);height:calc(var(--u)*2);object-fit:contain;}
+  .to-row .nm{flex:1;text-align:left;font-weight:600;color:#5a3a1e;font-size:calc(var(--u)*0.85);}
+  .to-row .cn{font-weight:700;font-size:calc(var(--u)*1.05);color:#2f7d22;}
+  .to-row .cn.short{color:#d33;}
+  .to-actions{display:flex;gap:calc(var(--u)*0.5);margin-top:calc(var(--u)*0.3);}
+  .to-do,.to-buy{flex:1;border:none;border-radius:calc(var(--u)*0.7);font-family:inherit;font-weight:700;color:#fff;cursor:pointer;
+    font-size:calc(var(--u)*0.95);padding:calc(var(--u)*0.5) calc(var(--u)*0.4);text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*0.3);}
+  .to-do{background:linear-gradient(#86d24c,#4f9c22);box-shadow:0 calc(var(--u)*0.26) 0 #3c7d18;}
+  .to-do:disabled{background:linear-gradient(#cfcabf,#a8a294);box-shadow:0 calc(var(--u)*0.26) 0 #807a6d;cursor:not-allowed;color:#f0ece3;}
+  .to-buy{background:linear-gradient(#ffb24d,#f08a2a);box-shadow:0 calc(var(--u)*0.26) 0 #c4661a;}
+  .to-buy:disabled{background:linear-gradient(#cfcabf,#a8a294);box-shadow:0 calc(var(--u)*0.26) 0 #807a6d;cursor:not-allowed;color:#f0ece3;}
+  .to-buy svg{width:calc(var(--u)*1.25);height:calc(var(--u)*0.85);}
+
+  /* radiation alert (solar flare) full-screen modal */
+  .flare-scrim{position:fixed;inset:0;z-index:50;display:none;background:radial-gradient(circle at 50% 42%,rgba(150,30,15,.55),rgba(30,5,5,.9));}
+  .flare-scrim.on{display:flex;align-items:center;justify-content:center;animation:flareBg 1.6s ease-in-out infinite;}
+  @keyframes flareBg{0%,100%{background-color:rgba(30,5,5,0);}50%{background-color:rgba(150,30,15,.16);}}
+  .flare-modal{position:relative;width:min(86%,calc(var(--u)*30));max-height:94%;overflow:auto;
+    background:linear-gradient(#2a0f0c,#180807);border:calc(var(--u)*0.3) solid #ff7a3c;border-radius:calc(var(--u)*1.2);
+    box-shadow:0 0 calc(var(--u)*2) rgba(255,90,40,.6);padding:calc(var(--u)*1.1) calc(var(--u)*1.2) calc(var(--u)*1);text-align:center;}
+  .flare-stripes{position:absolute;left:0;right:0;top:0;height:calc(var(--u)*0.55);border-radius:calc(var(--u)*0.9) calc(var(--u)*0.9) 0 0;
+    background:repeating-linear-gradient(45deg,#ffce2e 0 calc(var(--u)*0.85),#180807 calc(var(--u)*0.85) calc(var(--u)*1.7));}
+  .flare-modal h2{color:#ffd24d;font-family:'Russo One',system-ui;font-size:calc(var(--u)*1.7);letter-spacing:.05em;text-transform:uppercase;margin:calc(var(--u)*0.2) 0 calc(var(--u)*0.25);text-shadow:0 0 calc(var(--u)*0.5) rgba(255,120,40,.85);}
+  .flare-modal .ftext{color:#ffd9c2;font-size:calc(var(--u)*0.92);font-weight:500;line-height:1.3;margin-bottom:calc(var(--u)*0.55);}
+  /* big storm countdown */
+  .flare-big{display:flex;flex-direction:column;align-items:center;margin-bottom:calc(var(--u)*0.7);}
+  .flare-big .lbl{color:#ffcaa0;font-size:calc(var(--u)*0.72);font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+  .flare-big .big{font-family:'Russo One',system-ui;font-size:calc(var(--u)*3.2);line-height:1;color:#fff;letter-spacing:.04em;
+    text-shadow:0 0 calc(var(--u)*0.5) rgba(255,140,60,.95),0 0 calc(var(--u)*1.1) rgba(255,90,30,.7);}
+  /* 3 options side by side */
+  .flare-opts{display:flex;gap:calc(var(--u)*0.5);}
+  .flare-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*0.3);text-align:center;border:none;cursor:pointer;font-family:inherit;color:#fff;
+    border-radius:calc(var(--u)*0.85);padding:calc(var(--u)*0.6) calc(var(--u)*0.4);min-height:calc(var(--u)*6.2);justify-content:flex-start;}
+  .flare-opt:active{transform:translateY(3px);}
+  .flare-opt .ot{font-weight:700;font-size:calc(var(--u)*1);text-transform:uppercase;line-height:1.05;}
+  .flare-opt .osub{font-weight:500;font-size:calc(var(--u)*0.66);opacity:.95;line-height:1.25;}
+  .flare-opt .oshield{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*0.2);font-size:calc(var(--u)*0.68);font-weight:600;line-height:1.2;}
+  .flare-opt .oshield .needline{display:flex;align-items:center;gap:calc(var(--u)*0.25);background:rgba(0,0,0,.22);border-radius:999px;padding:calc(var(--u)*0.12) calc(var(--u)*0.45);}
+  .flare-opt .oshield .gico{width:calc(var(--u)*1.5);height:calc(var(--u)*1.5);object-fit:contain;}
+  .flare-opt .oshield .needline svg{width:calc(var(--u)*1.15);height:calc(var(--u)*0.8);vertical-align:middle;}
+  .flare-opt .oshield .rew{color:#0c2a0c;background:#bff58a;border-radius:999px;padding:calc(var(--u)*0.1) calc(var(--u)*0.45);font-weight:700;}
+  .fo-wait{background:linear-gradient(#3a4a66,#26334c);box-shadow:0 calc(var(--u)*0.26) 0 #161f30;}
+  .fo-shield{background:linear-gradient(#86d24c,#4f9c22);box-shadow:0 calc(var(--u)*0.26) 0 #3c7d18;}
+  .fo-risk{background:linear-gradient(#ff8a4d,#e2502e);box-shadow:0 calc(var(--u)*0.26) 0 #a82e16;}
+  .rad-chip{position:fixed;top:calc(var(--u)*0.5 + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:31;display:none;
+    background:rgba(60,10,8,.92);color:#ffd24d;font-weight:700;font-size:calc(var(--u)*0.9);border:calc(var(--u)*0.14) solid #ff7a3c;border-radius:999px;
+    padding:calc(var(--u)*0.3) calc(var(--u)*0.85);box-shadow:0 4px 12px rgba(0,0,0,.5);}
+  .rad-chip.on{display:block;}
+  .demobar .flr{color:#ffd98a;border:1.5px solid rgba(255,195,70,.5);}
+  .demobar .flr[hidden]{display:none;}
+
+  .demobar{position:fixed;bottom:calc(8px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:30;
+    display:flex;align-items:center;gap:10px;background:rgba(18,12,30,.82);padding:7px 10px;border-radius:999px;backdrop-filter:blur(5px);box-shadow:0 4px 14px rgba(0,0,0,.4);}
+  .demobar .phase{color:#ffd98a;font-weight:700;font-size:12px;padding:0 6px;min-width:120px;text-align:center;}
+  .demobar button{font-family:inherit;border:none;cursor:pointer;font-weight:700;font-size:13px;border-radius:999px;padding:8px 16px;}
+  .demobar .main{background:linear-gradient(#86d24c,#4f9c22);color:#fff;box-shadow:0 3px 0 #3c7d18;}
+  .demobar .main:disabled{background:#6b6b6b;box-shadow:0 3px 0 #444;color:#cfcfcf;cursor:default;}
+  .demobar .reset{background:rgba(255,255,255,.15);color:#fff;}
+  /* secondary demo buttons (muted outline, so they don't compete with the main CTA) */
+  .demobar .brk,.demobar .flr{background:rgba(255,255,255,.1);box-shadow:none;font-weight:600;font-size:12px;padding:7px 13px;opacity:.9;}
+  .demobar .brk:hover,.demobar .flr:hover{background:rgba(255,255,255,.2);opacity:1;}
+  .demobar .brk{color:#ff9e8e;border:1.5px solid rgba(255,110,80,.5);}
+  .demobar .brk[hidden]{display:none;}
+
+  /* ===== Orbital window widget (header pill, 2 planets) ===== */
+  .owin{position:absolute;left:calc(var(--u)*0.4);top:50%;transform:translateY(-50%);z-index:6;display:flex;align-items:center;gap:calc(var(--u)*0.55);
+    background:linear-gradient(#fceeca,#f1d6a2);border:calc(var(--u)*0.22) solid var(--gold);border-radius:calc(var(--u)*0.95);
+    box-shadow:0 0 0 calc(var(--u)*0.16) var(--gold-dark),0 calc(var(--u)*0.25) calc(var(--u)*0.5) rgba(0,0,0,.3);
+    padding:calc(var(--u)*0.28) calc(var(--u)*0.6) calc(var(--u)*0.28) calc(var(--u)*0.32);cursor:pointer;transition:box-shadow .4s;}
+  .owin.open{box-shadow:0 0 calc(var(--u)*0.9) rgba(120,235,120,.75),0 0 0 calc(var(--u)*0.16) #e0a83a,0 calc(var(--u)*0.25) calc(var(--u)*0.5) rgba(0,0,0,.3);}
+  .owin-scene{position:relative;display:flex;align-items:center;justify-content:space-between;
+    width:calc(var(--u)*7);height:calc(var(--u)*3.1);background:radial-gradient(circle at 50% 50%,#20304c,#0a1020);
+    border-radius:calc(var(--u)*0.6);overflow:hidden;padding:0 calc(var(--u)*0.3);box-shadow:inset 0 0 calc(var(--u)*0.45) rgba(0,0,0,.8);}
+  .owin-bridge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:calc(var(--u)*0.5);width:62%;border-radius:99px;
+    background:linear-gradient(90deg,rgba(130,255,150,0),rgba(140,255,160,.95),rgba(130,255,150,0));
+    opacity:0;transition:opacity .5s;filter:drop-shadow(0 0 5px rgba(130,255,150,.9));z-index:1;}
+  .owin.open .owin-bridge{opacity:1;}
+  .owin-p{position:relative;z-index:2;border-radius:50%;flex:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));
+    transition:width .6s ease,height .6s ease,transform .6s ease,opacity .6s ease;will-change:width,height,transform,opacity;}
+  .owin-p.mars{width:calc(var(--u)*2.3);height:calc(var(--u)*2.3);}
+  .owin-p.mines{width:calc(var(--u)*1);height:calc(var(--u)*1);transform:translateX(calc(var(--u)*0.5));opacity:.8;}
+  .owin.open .owin-p.mars{width:calc(var(--u)*2.7);height:calc(var(--u)*2.7);}
+  .owin.open .owin-p.mines{width:calc(var(--u)*2.4);height:calc(var(--u)*2.4);transform:translateX(0);opacity:1;}
+  .owin-info{display:flex;flex-direction:column;justify-content:center;min-width:calc(var(--u)*5.2);}
+  .owin-title{font-size:calc(var(--u)*0.58);font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--brown-soft);}
+  .owin.open .owin-title{color:#2f7d22;}
+  .owin-time{font-size:calc(var(--u)*1.05);font-weight:700;color:var(--brown);line-height:1;margin-top:calc(var(--u)*0.05);}
+  .owin-bonus2{margin-top:calc(var(--u)*0.12);font-size:calc(var(--u)*0.55);font-weight:700;color:#2f7d22;display:none;}
+  .owin.open .owin-bonus2{display:block;}
+
+  /* orbital popup */
+  .owin-scrim{position:fixed;inset:0;z-index:36;background:rgba(8,6,18,.5);display:none;}
+  .owin-scrim.on{display:block;}
+  .owin-pop{position:fixed;z-index:37;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(var(--u)*20);
+    background:linear-gradient(#fdf0d4,#f4ddb0);border:calc(var(--u)*0.3) solid var(--gold);border-radius:calc(var(--u)*1.1);
+    box-shadow:0 0 0 calc(var(--u)*0.22) var(--gold-dark),0 calc(var(--u)*0.9) calc(var(--u)*1.8) rgba(0,0,0,.55);padding:calc(var(--u)*0.9);display:none;text-align:center;}
+  .owin-pop.on{display:block;}
+  .owin-pop h3{color:var(--brown);font-size:calc(var(--u)*1.3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:calc(var(--u)*0.5);}
+  .owin-pop p{color:#6a4327;font-size:calc(var(--u)*0.92);font-weight:500;line-height:1.4;margin-bottom:calc(var(--u)*0.4);}
+  .owin-pop .ob{color:#2f7d22;font-weight:700;}
+  .pop-scene{position:relative;display:flex;align-items:center;justify-content:space-between;height:calc(var(--u)*7);
+    background:radial-gradient(circle at 50% 50%,#20304c,#0a1020);border-radius:calc(var(--u)*0.9);margin-bottom:calc(var(--u)*0.6);padding:0 calc(var(--u)*1.1);overflow:hidden;box-shadow:inset 0 0 calc(var(--u)*0.6) rgba(0,0,0,.8);}
+  .pop-scene .owin-p{transition:all .6s ease;}
+  .pop-scene .owin-p.mars{width:calc(var(--u)*4.8);height:calc(var(--u)*4.8);}
+  .pop-scene .owin-p.mines{width:calc(var(--u)*2);height:calc(var(--u)*2);opacity:.8;}
+  .owin-pop.isopen .pop-scene .owin-p.mars{width:calc(var(--u)*5.2);height:calc(var(--u)*5.2);}
+  .owin-pop.isopen .pop-scene .owin-p.mines{width:calc(var(--u)*4.8);height:calc(var(--u)*4.8);opacity:1;}
+  .pop-scene .owin-bridge{width:52%;height:calc(var(--u)*0.7);}
+  .owin-pop.isopen .pop-scene .owin-bridge{opacity:1;}
+  /* "pull together" animation when buying the window */
+  .owin-pop.aligning .pop-scene{animation:alignGlow 1.1s ease;}
+  .owin-pop.aligning .pop-scene .owin-bridge{animation:bridgeZap 1.1s ease;}
+  .owin-pop.aligning .pop-scene .owin-p.mars{animation:pullR 1.1s ease;}
+  .owin-pop.aligning .pop-scene .owin-p.mines{animation:pullL 1.1s ease;}
+  @keyframes alignGlow{0%{box-shadow:inset 0 0 calc(var(--u)*0.6) rgba(0,0,0,.8);}
+    55%{box-shadow:inset 0 0 calc(var(--u)*1.4) rgba(130,255,150,.85);}100%{box-shadow:inset 0 0 calc(var(--u)*0.6) rgba(0,0,0,.8);}}
+  @keyframes bridgeZap{0%{opacity:0;transform:translate(-50%,-50%) scaleX(0);}
+    55%{opacity:1;transform:translate(-50%,-50%) scaleX(1.12);}100%{opacity:1;transform:translate(-50%,-50%) scaleX(1);}}
+  @keyframes pullR{0%{transform:translateX(calc(var(--u)*-1.2));}60%{transform:translateX(calc(var(--u)*0.3));}100%{transform:translateX(0);}}
+  @keyframes pullL{0%{transform:translateX(calc(var(--u)*1.6));}60%{transform:translateX(calc(var(--u)*-0.3));}100%{transform:translateX(0);}}
+  .pop-time{font-size:calc(var(--u)*1);font-weight:700;color:var(--brown);margin-bottom:calc(var(--u)*0.5);display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*0.3);}
+  .pop-status{position:absolute;top:calc(var(--u)*0.5);right:calc(var(--u)*0.6);z-index:3;font-size:calc(var(--u)*0.7);font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    padding:calc(var(--u)*0.18) calc(var(--u)*0.55);border-radius:999px;display:flex;align-items:center;gap:calc(var(--u)*0.3);
+    background:rgba(20,28,44,.85);color:#9fb0c8;border:2px solid rgba(255,255,255,.25);}
+  .pop-status::before{content:'';width:calc(var(--u)*0.55);height:calc(var(--u)*0.55);border-radius:50%;background:#7c8aa0;}
+  .owin-pop.isopen .pop-status{color:#bff5a0;border-color:#86d24c;}
+  .owin-pop.isopen .pop-status::before{background:#86d24c;box-shadow:0 0 calc(var(--u)*0.4) #86d24c;}
+  .pop-rewards{display:flex;gap:calc(var(--u)*0.5);justify-content:center;margin-bottom:calc(var(--u)*0.5);}
+  .rw{display:flex;align-items:center;gap:calc(var(--u)*0.3);background:#fff7e6;border:2px solid #e6c98c;border-radius:999px;
+    padding:calc(var(--u)*0.25) calc(var(--u)*0.6);font-weight:700;font-size:calc(var(--u)*0.85);color:#5a3a1e;}
+  .rw .rw-i{font-size:calc(var(--u)*1.05);}
+  .rw.star .rw-i{color:#3a9bd6;}
+  .alignbtn .cashic{display:inline-flex;}
+  .alignbtn .cashic svg{width:calc(var(--u)*1.5);height:calc(var(--u)*1);vertical-align:middle;}
+  .pop-openmsg{display:none;margin-top:calc(var(--u)*0.2);font-weight:700;font-size:calc(var(--u)*1.05);color:#2f7d22;
+    background:linear-gradient(#dff3cf,#bfe6a0);border:2px solid #8fce63;border-radius:calc(var(--u)*0.7);padding:calc(var(--u)*0.5) calc(var(--u)*0.8);}
+  .owin-pop.isopen .pop-openmsg{display:block;}
+  .owin-pop.isopen .alignbtn{display:none;}
+  .owin-pop .alignbtn{border:none;border-radius:calc(var(--u)*0.75);font-family:inherit;font-weight:700;color:#fff;cursor:pointer;
+    font-size:calc(var(--u)*1.05);padding:calc(var(--u)*0.55) calc(var(--u)*1.2);text-transform:uppercase;display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*0.4);
+    background:linear-gradient(#8ad652,#4f9c22);box-shadow:0 calc(var(--u)*0.3) 0 #3c7d18,inset 0 2px 2px rgba(255,255,255,.5);margin-top:calc(var(--u)*0.2);}
+  .owin-pop .alignbtn:active{transform:translateY(3px);box-shadow:0 1px 0 #3c7d18;}
+  .owin-pop .closex{position:absolute;top:calc(var(--u)*-0.4);right:calc(var(--u)*-0.4);width:calc(var(--u)*2);height:calc(var(--u)*2);border-radius:50%;
+    background:#e2563a;border:calc(var(--u)*0.16) solid #fff;color:#fff;font-weight:700;cursor:pointer;}
+
+  /* travel-board bonus badge */
+  .tb-bonus{position:absolute;top:calc(var(--u)*-0.5);left:50%;transform:translateX(-50%);z-index:3;display:none;
+    background:linear-gradient(#ffe08a,#ffb12e);color:#5a3a00;font-weight:700;font-size:calc(var(--u)*0.9);
+    padding:calc(var(--u)*0.18) calc(var(--u)*0.7);border-radius:999px;border:calc(var(--u)*0.14) solid #fff;box-shadow:0 calc(var(--u)*0.2) calc(var(--u)*0.35) rgba(0,0,0,.4);white-space:nowrap;}
+  .tb-bonus.on{display:block;}
+
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-5%);}}
+  .toast{position:fixed;left:50%;top:calc(var(--u)*3);transform:translateX(-50%);z-index:40;background:rgba(30,20,10,.92);color:#fff;font-weight:600;font-size:calc(var(--u)*0.95);padding:calc(var(--u)*0.5) calc(var(--u)*1);border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;}
+  .toast.on{opacity:1;}
+</style>
+</head>
+<body>
+  <div id="loader"><div class="ldr-ring"></div><div class="ldr-txt">Загрузка…</div></div>
+  <div class="wrap"><div class="panel" id="panel">
+    <div class="topbar">
+      <div class="owin" id="owin" onclick="owinTap()">
+        <div class="owin-scene">
+          <img class="owin-p mars" src="planet-home-cut.webp">
+          <div class="owin-bridge"></div>
+          <img class="owin-p mines" src="planet-asteroid-cut.webp">
+        </div>
+        <div class="owin-info">
+          <div class="owin-title" id="owinTitle">Окно через</div>
+          <div class="owin-time" id="owinTime">3:59:00</div>
+          <div class="owin-bonus2">+50% и редкий ★</div>
+        </div>
+      </div>
+      <div class="title">Космопорт</div>
+      <div class="fuelind" id="fuelInd" title="Топливо для запуска">
+        <img src="icon-fuel-cut.webp" alt="топливо"><span class="fnum" id="fuelNum">1/2</span>
+        <button class="fbuy" id="fuelBuy" onclick="buyFuel()">Купить топливо · <svg viewBox="0 0 30 20"><rect x="1" y="2" width="28" height="16" rx="3" fill="#3aa856" stroke="#1f7a39" stroke-width="1.5"/><circle cx="15" cy="10" r="4.5" fill="#bff0c8" stroke="#1f7a39" stroke-width="1.2"/></svg> 30</button>
+      </div>
+      <button class="cbtn right"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#8a3b1e" stroke-width="3.2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="lanes">
+      <div class="lane active" id="laneActive">
+        <div class="convoy" id="convoy"></div>
+
+        <div class="travelboard">
+          <div class="tb-bonus" id="tbBonus">★ Бонус окна: +50% и редкий</div>
+          <div class="holo">
+            <div class="holo-scan"></div>
+            <div class="holo-label"><span class="dot"></span> Пункт назначения</div>
+            <div class="holo-dest"><span id="destName">ТРАНЗИТ</span><span class="holo-cur"></span></div>
+          </div>
+          <div class="tb-mid">
+            <div class="lab">Прибытие через</div>
+            <div class="timer"><div class="d" id="t0">5</div><div class="d" id="t1">4</div><span class="colon">:</span><div class="d" id="t2">5</div><div class="d" id="t3">4</div></div>
+            <div class="uns"><span>Мин</span><span>Сек</span></div>
+          </div>
+          <button class="speedup" onclick="speedUp()"><span class="l">Ускорить</span><span class="c"><svg viewBox="0 0 30 20"><rect x="1" y="2" width="28" height="16" rx="3" fill="#3aa856" stroke="#1f7a39" stroke-width="1.5"/><circle cx="15" cy="10" r="4.5" fill="#bff0c8" stroke="#1f7a39" stroke-width="1.2"/></svg>119</span></button>
+        </div>
+      </div>
+      <div class="lane locked"><div class="lock-content"><div class="txt">Новый шаттл станет доступен<br>на уровне колонии <span class="lvl">18</span></div></div></div>
+      <div class="lane locked"><div class="lock-content"><div class="txt">Новый шаттл станет доступен<br>на уровне колонии <span class="lvl">25</span></div></div></div>
+    </div>
+  </div></div>
+
+  <div class="hangar" id="hangar">
+    <div class="h-head">🏭 Ангар</div>
+    <div class="h-cap"><span id="hCap">60 / 200</span></div>
+    <div class="h-bar"><div class="h-fill" id="hFill"></div></div>
+  </div>
+
+  <!-- orbital window popup -->
+  <div class="owin-scrim" id="owinScrim" onclick="owinClose()"></div>
+  <div class="owin-pop" id="owinPop">
+    <button class="closex" onclick="owinClose()">✕</button>
+    <h3>Орбитальное окно</h3>
+    <div class="pop-scene">
+      <div class="pop-status" id="owinStatus">Закрыто</div>
+      <img class="owin-p mars" src="planet-home-cut.webp">
+      <div class="owin-bridge"></div>
+      <img class="owin-p mines" src="planet-asteroid-cut.webp">
+    </div>
+    <p>Раз в <b>4 часа</b> орбиты выстраиваются — на <b>45 минут</b> открывается короткий коридор запуска к точке назначения.</p>
+    <p>Запусти шаттл в это окно и получишь:</p>
+    <div class="pop-rewards">
+      <div class="rw"><span class="rw-i">📦</span> +50% груза</div>
+      <div class="rw star"><span class="rw-i">★</span> Редкий ресурс</div>
+    </div>
+    <div class="pop-time" id="owinPopTime"><span class="clk">⏳</span> Откроется через 3:59:00</div>
+    <button class="alignbtn" id="owinAlignBtn" onclick="owinAlign()">Открыть окно сейчас</button>
+    <div class="pop-openmsg" id="owinOpenMsg">✓ Окно открыто — запускай шаттл!</div>
+  </div>
+
+  <!-- radiation alert (solar flare) -->
+  <div class="flare-scrim" id="flareScrim">
+    <div class="flare-modal">
+      <div class="flare-stripes"></div>
+      <h2>Радиационная тревога</h2>
+      <div class="ftext">Солнечная вспышка! Запуск опасен — радиация может повредить груз.</div>
+      <div class="flare-big"><span class="lbl">Буря утихнет через</span><span class="big" id="flareBig">00:30</span></div>
+      <div class="flare-opts">
+        <button class="flare-opt fo-wait" onclick="flareWait()">
+          <span class="ot">Переждать</span>
+          <span class="osub">Бесплатно. Запуск заблокирован,<br>пока идёт буря.</span>
+        </button>
+        <button class="flare-opt fo-shield" onclick="flareShield()">
+          <span class="ot">Защититься<br>и лететь</span>
+          <span class="oshield" id="foShieldBody"></span>
+        </button>
+        <button class="flare-opt fo-risk" onclick="flareRisk()">
+          <span class="ot">Лететь<br>без защиты</span>
+          <span class="osub">Шанс <b>30%</b> потерять<br><b>~40%</b> груза. Старт сразу.</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="rad-chip" id="radChip">☢️ Радиация · 00:00</div>
+
+  <!-- maintenance (ТО) modal -->
+  <div class="owin-scrim" id="toScrim" onclick="toClose()"></div>
+  <div class="owin-pop to-pop" id="toPop">
+    <button class="closex" onclick="toClose()">✕</button>
+    <h3>🔧 Техобслуживание</h3>
+    <div class="to-sub" id="toSub">Ресурс двигателя исчерпан. Без ТО шаттл не полетит. Вложи ремонтные детали:</div>
+    <div id="toParts"></div>
+    <div class="to-actions">
+      <button class="to-do" id="toDoBtn" onclick="doTO()">Провести ТО</button>
+      <button class="to-buy" id="toBuyBtn" onclick="buyTO()">Купить ТО · <svg viewBox="0 0 30 20"><rect x="1" y="2" width="28" height="16" rx="3" fill="#3aa856" stroke="#1f7a39" stroke-width="1.5"/><circle cx="15" cy="10" r="4.5" fill="#bff0c8" stroke="#1f7a39" stroke-width="1.2"/></svg> 120</button>
+    </div>
+  </div>
+
+  <div class="scrim" id="scrim" onclick="closeModal()"></div>
+  <div class="modal" id="modal">
+    <div class="arrow"></div>
+    <div class="m-title" id="mTitle">Не хватает ресурса</div>
+    <div class="m-res"><img id="mIcon" src=""><span class="cnt" id="mCnt">0/0</span><button class="m-find" onclick="toast('Показать на карте колонии')">🔍</button></div>
+    <div id="mActions"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="demobar">
+    <span class="phase" id="phaseLbl">Шаг 1 · Загрузка</span>
+    <button class="main" id="btnMain" onclick="mainAction()">Загрузить всё</button>
+    <button class="brk" id="btnBreak" onclick="breakEngine()">💥 Поломка</button>
+    <button class="flr" id="btnFlare" onclick="triggerFlare()">☀️ Вспышка</button>
+    <button class="reset" onclick="resetAll()">↺ Сброс</button>
+  </div>
+
+  <script>
+    const RES={
+      helium:{open:'pod-load-helium-cutout.webp',dome:'pod-dome-helium-cutout.webp',icon:'icon-helium-cut.webp',need:2,have:5,reward:16,name:'Метан'},
+      air:{open:'pod-load-air-cutout.webp',dome:'pod-dome-air-cutout.webp',icon:'icon-air-cut.webp',need:3,have:1,reward:10,name:'Атмосферный газ'},
+      regolith:{open:'pod-load-brick-cutout.webp',dome:'pod-dome-brick-cutout.webp',icon:'icon-regolith-cut.webp',need:6,have:14,reward:14,name:'Реголит'},
+      iron:{open:'pod-load-iron-cutout.webp',dome:'pod-dome-iron-cutout.webp',icon:'icon-iron-cut.webp',need:4,have:4,reward:18,name:'Железная руда'},
+      gears:{open:'pod-ret-gears-cutout.webp',dome:'pod-dome-gears-cutout.webp',icon:'icon-gears-cut.webp',name:'Механоузлы',amount:4},
+      steel:{open:'pod-ret-steel-cutout.webp',dome:'pod-dome-steel-cutout.webp',icon:'icon-steel-cut.webp',name:'Сервоприводы',amount:3},
+      power:{open:'pod-ret-power-cutout.webp',dome:'pod-dome-power-cutout.webp',icon:'icon-power-cut.webp',name:'Электронные модули',amount:2},
+      glass:{open:'pod-ret-glass-cutout.webp',dome:'pod-dome-glass-cutout.webp',icon:'icon-glass-cut.webp',name:'Гелиар-панель',amount:3},
+    };
+    const EMPTY='mars-pod-magnet-cutout.webp', TUG='mars-tug-magnet-cutout.webp';
+    const SEND=['helium','air','regolith','iron'];   // tail -> tug
+    // mirrored train → DOM order is reverse of visual; visual L→R: Механоузлы, Сервоприводы, Электронные модули, Гелиар-панель
+    const RECV=['glass','power','steel','gears'];
+    const convoy=document.getElementById('convoy'), lane=document.getElementById('laneActive');
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    let phase='load', busy=false, wagons=[];
+
+    function wagonHTML(w,i){
+      const r=RES[w.key];
+      let openSrc, extra='';
+      if(w.kind==='send'){
+        if(w.loaded){ openSrc=r.open; extra=`<div class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="#fff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`; }
+        else { openSrc=EMPTY; const short=r.have<r.need;
+          extra=`<img class="ghost" src="${r.icon}"><span class="badge ${short?'short':''}">×${r.need}</span>`; }
+      } else { openSrc = w.collected ? EMPTY : r.open; }
+      const click = w.kind==='send' ? `onclick="tapSend(${i},this)"` : `onclick="tapRecv(${i},this)"`;
+      const cls = (w.kind==='send'&&!w.loaded)?'loadable':(w.kind==='recv'&&!w.collected?'loadable':'');
+      return `<div class="unit cap ${cls}" data-i="${i}" ${click}>
+        <div class="capwrap"><img class="lay-open" src="${openSrc}"><img class="lay-domed" src="${r.dome}">${extra}</div></div>`;
+    }
+    let convoyKind='send';
+    function build(kind){
+      convoyKind = kind;
+      const keys = kind==='send'?SEND:RECV;
+      wagons = keys.map(k=>({key:k,kind,loaded:false,collected:false}));
+      renderConvoy();
+    }
+    function renderConvoy(){   // re-render from the EXISTING wagons array (keeps loaded states)
+      const eng = convoyKind==='send' ? `<div class="engbar" onclick="event.stopPropagation();openTO(true)"><span class="engico">🔧</span><div class="engtrack"><div class="engfill" id="engFill"></div></div></div>` : '';
+      const inner = wagons.map(wagonHTML).join('') + `<div class="unit tug"><img class="body" src="${TUG}">${eng}</div>`;
+      convoy.innerHTML = `<div class="train ${convoyKind==='recv'?'mirror':''}">${inner}</div>`;
+      updateEngine();
+    }
+    const wagonEls=()=>[...convoy.querySelectorAll('.unit.cap')];
+
+    // ---- convoy slide helpers ----
+    function place(x){ convoy.style.transition='none'; convoy.style.transform='translateX('+x+')'; convoy.offsetWidth; convoy.style.transition=''; }
+    async function slideTo(x){ convoy.style.transform='translateX('+x+')'; await sleep(1000); }
+
+    // ---- phase / controls ----
+    function setPhase(p){ phase=p; updateControls(); owinShow(p==='load'); }
+    function updateControls(){
+      const L={load:'Шаг 1 · Загрузка',sealing:'Запечатывание…',departing:'Отправление…',travel:'Шаг 2 · В пути',
+        arriving:'Прибытие…',opening:'Раскрытие…',collect:'Шаг 3 · Разгрузка',leaving:'Смена шаттла…',incoming:'Подача шаттла…'};
+      document.getElementById('phaseLbl').textContent=L[phase]||phase;
+      const b=document.getElementById('btnMain');
+      if(phase==='load'){b.textContent='⚡ Загрузить всё и отправить';b.disabled=false;}
+      else if(phase==='travel'){b.textContent='⬅ Поезд прибыл';b.disabled=false;}
+      else if(phase==='collect'){b.textContent='✓ Собрать всё';b.disabled=false;}
+      else {b.textContent='…';b.disabled=true;}
+      const brk=document.getElementById('btnBreak'); if(brk) brk.hidden = (phase!=='load');   // breakdown sim only in step 1
+      const flr=document.getElementById('btnFlare'); if(flr) flr.hidden = (phase!=='load');   // flare sim only in step 1
+    }
+    function mainAction(){
+      if(busy)return;
+      if(phase==='load') forceLoadAndDepart();
+      else if(phase==='travel') arrive();
+      else if(phase==='collect') collectAll();
+    }
+    function speedUp(){ if(busy||phase!=='travel')return; toast('Ускорено!'); arrive(); }
+
+    // ---- LOAD ----
+    function resetStock(){ RES.helium.have=5; RES.air.have=1; RES.regolith.have=14; RES.iron.have=4; }  // air starts short (demo)
+    function startLoad(){ stopTimer(); document.getElementById('hangar').classList.remove('open'); resetStock(); setDestination(curDest); build('send'); convoy.classList.add('show'); place('0%'); lane.classList.remove('travel'); setPhase('load'); }
+    let curIdx=-1, modalAnchor=null;
+    const PRICE=8; let cash=300;              // in-game currency: banknotes (same as Ускорить)
+    const CASH='<svg viewBox="0 0 30 20"><rect x="1" y="2" width="28" height="16" rx="3" fill="#3aa856" stroke="#1f7a39" stroke-width="1.5"/><circle cx="15" cy="10" r="4.5" fill="#bff0c8" stroke="#1f7a39" stroke-width="1.2"/></svg>';
+    // shuttle destinations (random each launch)
+    const DESTS=[{flap:'ФОБОС',full:'Орбитальная станция «Фобос»'},{flap:'АСТЕРОИДЫ',full:'Астероидные шахты'},{flap:'ТРАНЗИТ',full:'Транзитный флот'},{flap:'МЕГАПОЛИС',full:'Купольный мегаполис'}];
+    let curDest=DESTS[0];
+    function setDestination(d){ curDest=d; const el=document.getElementById('destName'); if(el) el.textContent=d.flap; }
+    function randomDest(){ return DESTS[Math.floor(Math.random()*DESTS.length)]; }
+    // ----- real countdown timer -----
+    let timerInt=null, timerSec=0;
+    function renderTimer(){ const mm=Math.floor(timerSec/60), ss=timerSec%60;
+      document.getElementById('t0').textContent=Math.floor(mm/10); document.getElementById('t1').textContent=mm%10;
+      document.getElementById('t2').textContent=Math.floor(ss/10); document.getElementById('t3').textContent=ss%10; }
+    function stopTimer(){ if(timerInt){clearInterval(timerInt); timerInt=null;} }
+    function startTimer(sec){ stopTimer(); timerSec=sec; renderTimer();
+      timerInt=setInterval(()=>{ timerSec--; if(timerSec<=0){ timerSec=0; renderTimer(); stopTimer(); if(phase==='travel'&&!busy) arrive(); return; } renderTimer(); }, 1000); }
+    function tapSend(i,el){ if(wagons[i].loaded||busy)return; curIdx=i; modalAnchor=el;
+      document.getElementById('scrim').classList.add('on'); document.getElementById('modal').classList.add('on');
+      refreshModal(); positionModal(el); }
+    function positionModal(el){ const pr=document.getElementById('panel').getBoundingClientRect(), er=el.getBoundingClientRect(), m=document.getElementById('modal');
+      const mw=m.offsetWidth; m.style.left=Math.max(8,Math.min(er.left+er.width/2-pr.left-mw/2,pr.width-mw-8))+'px'; m.style.top=(er.bottom-pr.top+8)+'px'; }
+    function refreshModal(){ const r=RES[wagons[curIdx].key];
+      document.getElementById('mIcon').src=r.icon;
+      const short=r.have<r.need, cnt=document.getElementById('mCnt'); cnt.textContent=r.have+'/'+r.need; cnt.classList.toggle('short',short);
+      document.getElementById('mTitle').textContent = short ? 'Не хватает ресурса' : 'Загрузить ресурс';
+      const act=document.getElementById('mActions');
+      if(!short){ act.innerHTML=`<button class="m-load" onclick="doLoad()">Загрузить</button>`; }
+      else { const cost=(r.need-r.have)*PRICE, poor=cash<cost;
+        act.innerHTML=`<div class="m-row">
+            <button class="m-req" onclick="reqHelp()">Запрос</button>
+            <button class="m-buy" ${poor?'disabled':''} onclick="buyMissing()">Купить ${CASH}${cost}</button>
+          </div>`; }
+    }
+    function reqHelp(){ toast('Запрос отправлен соседям'); }
+    function buyMissing(){ const r=RES[wagons[curIdx].key]; const deficit=r.need-r.have; if(deficit<=0)return;
+      const cost=deficit*PRICE; if(cash<cost){ toast('Недостаточно средств'); return; }
+      cash-=cost; r.have=r.need;                 // missing product is added to the barn
+      toast('Куплено: +'+deficit+' '+r.name);
+      renderConvoy();                            // wagon is no longer short
+      refreshModal();                            // modal switches to "Загрузить"
+    }
+    function closeModal(){document.getElementById('scrim').classList.remove('on');document.getElementById('modal').classList.remove('on');}
+    function markLoaded(i){ wagons[i].loaded=true; const el=wagonEls()[i];
+      el.classList.remove('loadable'); el.querySelector('.lay-open').src=RES[wagons[i].key].open;
+      el.querySelector('.ghost')?.remove(); el.querySelector('.badge')?.remove(); el.querySelector('.excl')?.remove();
+      if(!el.querySelector('.check')){ const c=document.createElement('div'); c.className='check';
+        c.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-10" stroke="#fff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        el.querySelector('.capwrap').appendChild(c);} }
+    function doLoad(){ const r=RES[wagons[curIdx].key]; if(r.have<r.need)return; markLoaded(curIdx); closeModal();
+      if(wagons.every(w=>w.loaded)) sealAndDepart(); }
+
+    async function forceLoadAndDepart(){ wagons.forEach((w,i)=>{ if(!w.loaded) markLoaded(i); }); await sleep(250); await sealAndDepart(); }
+
+    async function sealAndDepart(){
+      if(busy)return;
+      if(radStormUntil>Date.now()/1000){ openFlareModal(); return; }   // radiation storm active → must choose / wait
+      if(fuel<FUEL_NEED){ const fi=document.getElementById('fuelInd'); if(fi){ fi.classList.remove('shake'); void fi.offsetWidth; fi.classList.add('shake'); }
+        toast('⛽ Не хватает топлива ('+fuel+'/'+FUEL_NEED+') — нажми на картридж'); return; }   // no fuel → blocked, highlight indicator
+      if(engine<=0){ openTO(); return; }       // engine spent → maintenance required, launch blocked
+      busy=true; closeModal(); engine-=1; updateEngine(); fuel-=FUEL_NEED; updateFuel();   // consume engine + fuel per trip
+      setPhase('sealing');
+      const els=wagonEls();
+      for(let i=0;i<els.length;i++){ els[i].classList.add('sealed'); toastTick(); await sleep(180); }
+      await sleep(550);
+      // capture orbital-window bonus at the moment of launch
+      bonusActive = document.getElementById('owin').classList.contains('open');
+      document.getElementById('tbBonus').classList.toggle('on', bonusActive);
+      if(bonusActive) toast('🚀 Запуск в окно — бонус активен!');
+      setPhase('departing'); await slideTo('140%');
+      convoy.classList.remove('show'); busy=false;
+      setDestination(randomDest()); toast('Курс: '+curDest.full);   // random destination each launch
+      lane.classList.add('travel'); setPhase('travel');
+      startTimer(3600);                  // real countdown from 1 hour (60:00)
+    }
+
+    // ---- ARRIVE / OPEN ----
+    async function arrive(){
+      if(busy)return; busy=true; stopTimer(); lane.classList.remove('travel'); setPhase('arriving');
+      build('recv');
+      document.getElementById('hangar').classList.add('open'); updateHangar();   // warehouse slides in
+      const els=wagonEls(); els.forEach(e=>{e.classList.add('notrans');e.classList.add('sealed');});
+      convoy.classList.add('show'); convoy.offsetWidth; els.forEach(e=>e.classList.remove('notrans'));
+      place('140%'); await slideTo('0%');      // materials train enters from the RIGHT
+      await sleep(500);                        // arrives closed, holds 0.5s, then opens
+      setPhase('opening');
+      for(let i=0;i<els.length;i++){ els[i].classList.remove('sealed'); await sleep(180); }
+      await sleep(400); busy=false; setPhase('collect');
+    }
+
+    // ---- COLLECT ----
+    // ----- warehouse / hangar (total only) -----
+    const CAP=200; let stock=60;
+    function updateHangar(){ const f=document.getElementById('hFill'); if(f) f.style.width=Math.min(100,stock/CAP*100)+'%';
+      const cap=document.getElementById('hCap'); if(cap) cap.textContent=stock+' / '+CAP; }
+    function bumpStock(){ const c=document.getElementById('hCap'); if(!c)return; c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+    function flyOne(srcRect,key){
+      const hang=document.getElementById('hangar'); const tgt=hang.getBoundingClientRect();
+      const size=Math.max(26,srcRect.height*0.4);
+      const img=document.createElement('img'); img.src=RES[key].icon; img.className='flyicon'; img.style.width=size+'px';
+      const sx=srcRect.left+srcRect.width/2, sy=srcRect.top+srcRect.height*0.4;
+      img.style.left=(sx-size/2)+'px'; img.style.top=(sy-size/2)+'px';
+      document.body.appendChild(img); img.getBoundingClientRect();
+      const dx=(tgt.left+tgt.width/2)-sx, dy=(tgt.top+tgt.height/2)-sy;
+      requestAnimationFrame(()=>{ img.style.transform=`translate(${dx}px,${dy}px) scale(.4)`; img.style.opacity='.25'; });
+      setTimeout(()=>{ img.remove(); stock=Math.min(CAP,stock+1); bumpStock(); updateHangar(); }, 720);
+    }
+
+    function tapRecv(i,el){ if(busy)return; collectOne(i,el); if(wagons.every(w=>w.collected)) afterCollect(); }
+    function collectOne(i,el){ const w=wagons[i]; if(w.collected)return; w.collected=true; el.classList.remove('loadable');
+      const cw=el.querySelector('.capwrap'); const r=cw.getBoundingClientRect(); const amt=RES[w.key].amount||1;
+      el.querySelector('.lay-open').src=EMPTY;                       // wagon empties (cargo leaves)
+      for(let n=0;n<amt;n++) setTimeout(()=>flyOne(r,w.key), n*130); // fly `amt` resource icons into the hangar
+      inv[w.key]=(inv[w.key]||0)+amt;                                // store parts for maintenance / building
+      toast('+'+amt+' '+RES[w.key].name); }
+    async function collectAll(){ if(busy)return; busy=true; const els=wagonEls();
+      for(let i=0;i<els.length;i++){ if(!wagons[i].collected){ collectOne(i,els[i]); await sleep(260); } }
+      busy=false; afterCollect(); }
+    async function afterCollect(){
+      if(busy)return; busy=true; setPhase('leaving');
+      if(bonusActive){ const b=Math.round(RECV.reduce((a,k)=>a+RES[k].amount,0)*0.5);
+        stock=Math.min(CAP,stock+b); updateHangar(); toast('★ Бонус окна: +'+b+' и редкий ресурс!');
+        bonusActive=false; document.getElementById('tbBonus').classList.remove('on'); }
+      if(flareBonus){ const b=Math.round(RECV.reduce((a,k)=>a+RES[k].amount,0)*FLARE_BONUS); stock=Math.min(CAP,stock+b); updateHangar(); toast('Прорыв сквозь бурю: +'+b+' к грузу'); flareBonus=false; }
+      if(flareRiskFlag){ const tot=RECV.reduce((a,k)=>a+RES[k].amount,0);
+        if(Math.random()<RISK_CHANCE){ const loss=Math.round(tot*RISK_LOSS); stock=Math.max(0,stock-loss); updateHangar(); toast('☢️ Радиация повредила груз: −'+loss); }
+        else toast('Прорыв удался — груз цел'); flareRiskFlag=false; }
+      document.getElementById('hangar').classList.remove('open');   // warehouse slides away
+      await sleep(450);
+      await slideTo('-140%'); convoy.classList.remove('show');   // materials train leaves to the LEFT
+      setPhase('incoming'); resetStock(); build('send'); convoy.classList.add('show'); place('-140%'); await slideTo('0%');
+      busy=false; setPhase('load');
+    }
+
+    function resetAll(){ if(busy)return; closeModal(); toClose(); closeFlare(); convoy.classList.remove('show'); lane.classList.remove('travel');
+      stock=60; cash=300; engine=ENG_MAX; inv={gears:5,steel:4,power:3,glass:5,areolite:1}; fuel=1; updateFuel();
+      radStormUntil=0; stormWasActive=false; flareBonus=false; flareRiskFlag=false; document.getElementById('radChip').classList.remove('on');
+      updateHangar(); startLoad(); toast('Демо сброшено'); }
+
+    // ===== orbital window (real timing: window every 4h, lasts 45 min) =====
+    let bonusActive=false;
+    const PERIOD=4*3600, DUR=45*60, ALIGN_COST=60;   // 4 hours between windows, 45 min open; instant-open price (banknotes)
+    let nextOpen=0, alignedUntil=0;
+    function owinInit(){ const now=Date.now()/1000; nextOpen=now + 3*3600 + 59*60; alignedUntil=0; } // start closed (~3:59 to next)
+    function fmtHMS(s){ s=Math.max(0,Math.round(s)); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;
+      const p=n=>(n<10?'0':'')+n; return h>0 ? h+':'+p(m)+':'+p(ss) : p(m)+':'+p(ss); }
+    function owinUpdate(){
+      const now=Date.now()/1000; let open, secs;
+      if(now < alignedUntil){ open=true; secs=alignedUntil-now; }
+      else if(now >= nextOpen){ alignedUntil=nextOpen+DUR; nextOpen=nextOpen+PERIOD; open=true; secs=alignedUntil-now; }
+      else { open=false; secs=nextOpen-now; }
+      const w=document.getElementById('owin'); if(w) w.classList.toggle('open',open);
+      const tt=document.getElementById('owinTitle'); if(tt) tt.textContent = open?'Бонус активен':'Бонус через';
+      const tm=document.getElementById('owinTime'); if(tm) tm.textContent = fmtHMS(secs);
+      const pop=document.getElementById('owinPop'); if(pop) pop.classList.toggle('isopen',open);
+      const st=document.getElementById('owinStatus'); if(st) st.textContent = open?'Открыто':'Закрыто';
+      const pt=document.getElementById('owinPopTime'); if(pt) pt.innerHTML='<span class="clk">⏳</span> '+(open?'Открыто ещё ':'Откроется через ')+fmtHMS(secs);
+      const ab=document.getElementById('owinAlignBtn'); if(ab) ab.innerHTML='<span class="cashic">'+CASH+'</span> Открыть окно сейчас · '+ALIGN_COST;
+      // radiation storm countdown (chip + modal big timer)
+      const stormOn=radStormUntil>now, rc=document.getElementById('radChip');
+      const modal=document.getElementById('flareScrim'), modalOpen=modal&&modal.classList.contains('on');
+      if(modalOpen){ const b=document.getElementById('flareBig'); if(b) b.textContent=fmtHMS(Math.max(0,radStormUntil-now)); if(!stormOn) closeFlare(); }
+      if(rc){ if(stormOn && !modalOpen){ rc.classList.add('on'); rc.textContent='☢️ Радиация · '+fmtHMS(radStormUntil-now); } else rc.classList.remove('on'); }
+      if(stormWasActive && !stormOn){ stormWasActive=false; toast('Буря утихла — можно лететь');
+        if(phase==='load' && !busy && wagons.length && wagons.every(w=>w.loaded)) sealAndDepart(); }   // auto-launch if ready
+      if(stormOn) stormWasActive=true;
+    }
+    function owinTap(){ owinUpdate(); document.getElementById('owinPop').classList.add('on'); document.getElementById('owinScrim').classList.add('on'); }
+    function owinClose(){ document.getElementById('owinPop').classList.remove('on'); document.getElementById('owinScrim').classList.remove('on'); }
+    let aligning=false;
+    function owinAlign(){ if(aligning) return; const now=Date.now()/1000;
+      if(cash<ALIGN_COST){ toast('Недостаточно средств'); return; }
+      aligning=true; cash-=ALIGN_COST;
+      alignedUntil=now+DUR; nextOpen=now+PERIOD;
+      owinUpdate();                                   // planets pull together + bridge appears (CSS transition)
+      const pop=document.getElementById('owinPop'); pop.classList.add('aligning');
+      toast('Орбита выравнивается…');
+      setTimeout(()=>{ pop.classList.remove('aligning'); aligning=false; owinClose(); toast('Окно открыто на 45 минут!'); }, 1200);
+    }
+    function owinShow(on){ const w=document.getElementById('owin'); if(w) w.style.display = on?'flex':'none'; }
+
+    // ===== engine durability + maintenance (ТО) =====
+    const ENG_MAX=10, TO_COST=120;
+    const TO_REQ=[{key:'gears',need:4},{key:'steel',need:3}];   // Механоузлы + Сервоприводы
+    let engine=ENG_MAX;
+    let inv={gears:5,steel:4,power:3,glass:5,areolite:1};       // parts inventory; areolite = rare radiation shield (starts with 1)
+    function updateEngine(){ const f=document.getElementById('engFill'); if(!f)return;
+      f.style.width=Math.max(0,engine/ENG_MAX*100)+'%';
+      f.className='engfill'+(engine<=2?' low':engine<=4?' mid':''); }
+    function breakEngine(){ engine=0; updateEngine(); toast('💥 Двигатель изношен — нужно ТО'); }   // demo: simulate breakdown
+
+    // ===== launch fuel (cartridges) =====
+    const FUEL_NEED=2, FUEL_COST=30; let fuel=1;   // need 2 per launch; start with 1
+    function updateFuel(){ const n=document.getElementById('fuelNum'); if(n) n.textContent=fuel+'/'+FUEL_NEED;
+      const w=document.getElementById('fuelInd'); if(w) w.classList.toggle('low',fuel<FUEL_NEED); }
+    function buyFuel(){ if(fuel>=FUEL_NEED){ toast('Топливо заполнено'); return; }
+      if(cash<FUEL_COST){ toast('Недостаточно средств'); return; }
+      cash-=FUEL_COST; fuel=Math.min(FUEL_NEED,fuel+1); updateFuel(); toast('+1 топливный картридж');
+      if(fuel>=FUEL_NEED && phase==='load' && !busy && radStormUntil<=Date.now()/1000 && wagons.length && wagons.every(w=>w.loaded)) sealAndDepart(); }
+
+    // ===== radiation alert / solar flare =====
+    const SHIELD_KEY='areolite', SHIELD_COST=50, STORM_MIN=10, STORM_MAX=30;   // shield = Areolite panel; demo storm seconds (prod: 10–30 min)
+    const FLARE_BONUS=0.25, RISK_CHANCE=0.30, RISK_LOSS=0.40;               // breakthrough +25% / risk 30% to lose 40%
+    let radStormUntil=0, flareBonus=false, flareRiskFlag=false, stormWasActive=false;
+    function triggerFlare(){ if(phase!=='load')return; radStormUntil=Date.now()/1000+Math.floor(STORM_MIN+Math.random()*(STORM_MAX-STORM_MIN)); openFlareModal(); }
+    function openFlareModal(){
+      const have=inv[SHIELD_KEY]||0, body=document.getElementById('foShieldBody');
+      if(have>=1) body.innerHTML='<span class="needline"><img class="gico" src="icon-areolite-cut.webp">×1 щит-панель · у вас '+have+'</span><span class="rew">Прорыв: +25% к грузу</span>';
+      else body.innerHTML='<span class="needline">Нет щит-панели — купить '+CASH+' '+SHIELD_COST+'</span><span class="rew">Прорыв: +25% к грузу</span>';
+      flareTick(); document.getElementById('flareScrim').classList.add('on');
+    }
+    function closeFlare(){ document.getElementById('flareScrim').classList.remove('on'); }
+    function flareTick(){ const b=document.getElementById('flareBig'); if(b) b.textContent=fmtHMS(Math.max(0,radStormUntil-Date.now()/1000)); }
+    function flareWait(){ closeFlare(); toast('Пережидаем бурю…'); }     // storm keeps ticking; launch blocked until it ends
+    function flareShield(){ const have=inv[SHIELD_KEY]||0;
+      if(have>=1){ inv[SHIELD_KEY]-=1; } else { if(cash<SHIELD_COST){ toast('Недостаточно средств'); return; } cash-=SHIELD_COST; }
+      radStormUntil=0; stormWasActive=false; flareBonus=true; closeFlare(); toast('Защита установлена — прорыв!'); launchThroughFlare(); }
+    function flareRisk(){ radStormUntil=0; stormWasActive=false; flareRiskFlag=true; closeFlare(); toast('Идём на риск!'); launchThroughFlare(); }
+    function launchThroughFlare(){ wagons.forEach((w,i)=>{ if(w.kind==='send'&&!w.loaded) markLoaded(i); }); sealAndDepart(); }
+    function openTO(){
+      const full=engine>=ENG_MAX, enough=TO_REQ.every(rq=>(inv[rq.key]||0)>=rq.need);
+      const sub=document.getElementById('toSub');
+      if(engine<=0) sub.textContent='Ресурс двигателя исчерпан. Без ТО шаттл не полетит. Вложи ремонтные детали:';
+      else if(full) sub.textContent='Двигатель в норме: '+engine+'/'+ENG_MAX+'. ТО пока не требуется.';
+      else sub.textContent='Заряд двигателя: '+engine+'/'+ENG_MAX+'. Можно провести ТО заранее — восстановит до максимума.';
+      document.getElementById('toParts').innerHTML=TO_REQ.map(rq=>{ const r=RES[rq.key], have=inv[rq.key]||0, short=have<rq.need;
+        return `<div class="to-row"><img src="${r.icon}"><span class="nm">${r.name}</span><span class="cn ${short?'short':''}">${have}/${rq.need}</span></div>`; }).join('');
+      document.getElementById('toDoBtn').disabled = full || !enough;   // nothing to restore when full
+      document.getElementById('toBuyBtn').disabled = full;
+      document.getElementById('toScrim').classList.add('on'); document.getElementById('toPop').classList.add('on'); }
+    function toClose(){ document.getElementById('toScrim').classList.remove('on'); document.getElementById('toPop').classList.remove('on'); }
+    function afterRepair(){ engine=ENG_MAX; updateEngine(); toClose(); toast('ТО проведено — двигатель в норме');
+      if(phase==='load' && wagons.every(w=>w.loaded)) sealAndDepart(); }   // continue the blocked launch
+    function doTO(){ if(!TO_REQ.every(rq=>(inv[rq.key]||0)>=rq.need)) return;
+      TO_REQ.forEach(rq=>inv[rq.key]-=rq.need); afterRepair(); }
+    function buyTO(){ if(cash<TO_COST){ toast('Недостаточно средств'); return; } cash-=TO_COST; afterRepair(); }
+
+    let tT; function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('on'),1500);}
+    function toastTick(){}
+
+    // ── preload: gate only the FIRST-SCREEN assets, load the rest in the background ──
+    const CRITICAL=['cosmoport-lane-bg.webp','mars-tug-magnet-cutout.webp','mars-pod-magnet-cutout.webp','pod-load-helium-cutout.webp','pod-load-air-cutout.webp','pod-load-brick-cutout.webp','pod-load-iron-cutout.webp','icon-helium-cut.webp','icon-air-cut.webp','icon-regolith-cut.webp','icon-iron-cut.webp','icon-fuel-cut.webp','icon-areolite-cut.webp','planet-home-cut.webp','planet-asteroid-cut.webp'];
+    const REST=['pod-dome-air-cutout.webp','pod-dome-brick-cutout.webp','pod-dome-gears-cutout.webp','pod-dome-glass-cutout.webp','pod-dome-helium-cutout.webp','pod-dome-iron-cutout.webp','pod-dome-power-cutout.webp','pod-dome-steel-cutout.webp','pod-ret-gears-cutout.webp','pod-ret-glass-cutout.webp','pod-ret-power-cutout.webp','pod-ret-steel-cutout.webp','icon-gears-cut.webp','icon-glass-cut.webp','icon-power-cut.webp','icon-steel-cut.webp'];
+    function pre(list,cb){ if(!list.length) return Promise.resolve(); let d=0;
+      return Promise.all(list.map(s=>new Promise(r=>{ const im=new Image(); im.onload=im.onerror=()=>{ d++; cb&&cb(d,list.length); r(); }; im.src=s; }))); }
+    function setProg(p){ const t=document.querySelector('#loader .ldr-txt'); if(t) t.textContent='Загрузка '+p+'%'; }
+    let booted=false;
+    function boot(){ if(booted) return; booted=true;
+      startLoad(); updateFuel(); owinInit(); owinUpdate(); setInterval(owinUpdate,1000);
+      const l=document.getElementById('loader'); if(l){ l.classList.add('hide'); setTimeout(()=>l.remove(),500); }
+      pre(REST);   // warm the rest of the assets in the background
+    }
+    pre(CRITICAL,(d,n)=>setProg(Math.round(d/n*100))).then(boot);
+    setTimeout(boot, 3500);   // safety: never sit on the loader
+  </script>
+</body>
+</html>
