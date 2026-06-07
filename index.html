@@ -325,6 +325,20 @@
   .owin-pop.isopen .pop-scene .owin-p.mines{width:calc(var(--u)*4.8);height:calc(var(--u)*4.8);opacity:1;}
   .pop-scene .owin-bridge{width:52%;height:calc(var(--u)*0.7);}
   .owin-pop.isopen .pop-scene .owin-bridge{opacity:1;}
+  /* orbital rings + long-path (closed) decoration */
+  .pop-orbit{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);border:1.5px dashed rgba(130,170,220,.22);border-radius:50%;pointer-events:none;}
+  .pop-orbit.o1{width:42%;height:66%;}
+  .pop-orbit.o2{width:84%;height:94%;}
+  .pop-path{position:absolute;left:20%;right:20%;top:50%;height:0;border-top:2px dashed rgba(150,185,225,.45);transform:translateY(-50%);transition:opacity .4s;}
+  .owin-pop.isopen .pop-path{opacity:0;}
+  .rw .rw-img{width:calc(var(--u)*1.55);height:calc(var(--u)*1.55);object-fit:contain;vertical-align:middle;margin-right:2px;}
+  /* cycle progress bar */
+  .pop-prog{width:74%;height:calc(var(--u)*0.7);margin:calc(var(--u)*0.1) auto calc(var(--u)*0.5);background:#caa074;border-radius:999px;overflow:hidden;
+    box-shadow:inset 0 2px 3px rgba(80,40,10,.5);border:1px solid #b58a5e;}
+  .pop-prog-fill{height:100%;width:5%;border-radius:999px;background:linear-gradient(#7fd0f5,#3b9bd6);transition:width .5s ease;box-shadow:inset 0 1px 1px rgba(255,255,255,.5);}
+  .owin-pop.isopen .pop-prog-fill{background:linear-gradient(#86d24c,#4f9c22);}
+  .pop-hint{font-size:calc(var(--u)*0.72);color:var(--brown-soft);font-weight:500;margin-top:calc(var(--u)*0.35);}
+  .owin-pop.isopen .pop-hint{display:none;}
   /* "pull together" animation when buying the window */
   .owin-pop.aligning .pop-scene{animation:alignGlow 1.1s ease;}
   .owin-pop.aligning .pop-scene .owin-bridge{animation:bridgeZap 1.1s ease;}
@@ -432,6 +446,8 @@
     <h3>Орбитальное окно</h3>
     <div class="pop-scene">
       <div class="pop-status" id="owinStatus">Закрыто</div>
+      <div class="pop-orbit o2"></div><div class="pop-orbit o1"></div>
+      <div class="pop-path"></div>
       <img class="owin-p mars" src="planet-home-cut.webp">
       <div class="owin-bridge"></div>
       <img class="owin-p mines" src="planet-asteroid-cut.webp">
@@ -440,10 +456,12 @@
     <p>Запусти шаттл в это окно и получишь:</p>
     <div class="pop-rewards">
       <div class="rw"><span class="rw-i">📦</span> +50% груза</div>
-      <div class="rw star"><span class="rw-i">★</span> Редкий ресурс</div>
+      <div class="rw"><img class="rw-img" src="icon-areolite-cut.webp"> Редкий ресурс</div>
     </div>
     <div class="pop-time" id="owinPopTime"><span class="clk">⏳</span> Откроется через 3:59:00</div>
+    <div class="pop-prog"><div class="pop-prog-fill" id="owinProg"></div></div>
     <button class="alignbtn" id="owinAlignBtn" onclick="owinAlign()">Открыть окно сейчас</button>
+    <div class="pop-hint" id="owinHint">или дождись — окно откроется само, бесплатно</div>
     <div class="pop-openmsg" id="owinOpenMsg">✓ Окно открыто — запускай шаттл!</div>
   </div>
 
@@ -735,6 +753,7 @@
       const pop=document.getElementById('owinPop'); if(pop) pop.classList.toggle('isopen',open);
       const st=document.getElementById('owinStatus'); if(st) st.textContent = open?'Открыто':'Закрыто';
       const pt=document.getElementById('owinPopTime'); if(pt) pt.innerHTML='<span class="clk">⏳</span> '+(open?'Открыто ещё ':'Откроется через ')+fmtHMS(secs);
+      const prog=document.getElementById('owinProg'); if(prog){ const pct = open ? Math.max(2,Math.min(100, secs/DUR*100)) : Math.max(2,Math.min(100,(PERIOD-secs)/PERIOD*100)); prog.style.width=pct+'%'; }
       const ab=document.getElementById('owinAlignBtn'); if(ab) ab.innerHTML='<span class="cashic">'+CASH+'</span> Открыть окно сейчас · '+ALIGN_COST;
       // radiation storm countdown (chip + modal big timer)
       const stormOn=radStormUntil>now, rc=document.getElementById('radChip');
